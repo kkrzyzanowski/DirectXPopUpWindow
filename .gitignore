@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/DirectXPopUpWindow
+/DirectXP.d1226b3e/x64/Debug/DirectXP.d1226b3e.tlog
+/DirectXP.d1226b3e/x64/Debug
+/x64/Debug/DirectXPopUpWindow.exe
+/x64/Debug/DirectXPopUpWindow.pdb
