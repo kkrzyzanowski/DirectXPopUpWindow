@@ -1,10 +1,10 @@
 #include "GUIButton.h"
 #include <d3dcompiler.h>
-
+#include <WICTextureLoader.h>
 #pragma comment(lib, "d3dcompiler.lib")
 
-GUIButton::GUIButton(const std::wstring& text, float x, float y, float width, float height)
-	: m_text(text), m_position(x, y), m_size(width, height), m_clicked(false), m_hovered(false),
+GUIButton::GUIButton(const std::wstring& text, const std::wstring& iconPath, float x, float y, float width, float height)
+	: m_text(text), m_iconPath(iconPath), m_position(x, y), m_size(width, height), m_clicked(false), m_hovered(false),
 	m_vertexBuffer(nullptr), m_indexBuffer(nullptr), m_vertexShader(nullptr),
 	m_pixelShader(nullptr), m_inputLayout(nullptr), m_samplerState(nullptr), m_matrixBuffer(nullptr), m_buttonBuffer(nullptr),
 	m_normalColor(0.2f, 0.2f, 0.8f, 1.0f),
@@ -41,6 +41,12 @@ bool GUIButton::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCont
 		DirectX::XMMatrixOrthographicLH(screenWidth, screenHeight, 0.1f, 100.0f)
 	};
 
+	HRESULT hr = DirectX::CreateWICTextureFromFile(device, deviceContext, m_iconPath.c_str(), nullptr, &m_iconTexture);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
 	D3D11_BUFFER_DESC matrixBufferDesc = {};
 	matrixBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	matrixBufferDesc.ByteWidth = sizeof(m_matrixBufferData);
@@ -62,7 +68,8 @@ bool GUIButton::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCont
 	D3D11_SUBRESOURCE_DATA initData = {};
 	initData.pSysMem = vertices;
 
-	if (FAILED(device->CreateBuffer(&vertexBufferDesc, &initData, &m_vertexBuffer))) {
+	if (FAILED(device->CreateBuffer(&vertexBufferDesc, &initData, &m_vertexBuffer))) 
+	{
 		return false;
 	}
 
@@ -76,6 +83,20 @@ bool GUIButton::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCont
 		m_size,
 		m_normalColor
 	};
+
+	D3D11_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;	
+	samplerDesc.MinLOD = 0;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	if (FAILED(device->CreateSamplerState(&samplerDesc, &m_samplerState)))	 
+	{
+		return false;
+	}
 
 	D3D11_SUBRESOURCE_DATA buttonInitData = {};
 	buttonInitData.pSysMem = &buttonBufferData;
@@ -147,6 +168,10 @@ bool GUIButton::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCont
         float4 normalColor;
     };
 
+
+	Texture2D iconTexture : register(t0);
+	SamplerState samplerState : register(s0);
+
     struct PS_INPUT
     {
         float4 position : SV_POSITION;
@@ -155,9 +180,11 @@ bool GUIButton::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCont
 
     float4 main(PS_INPUT input) : SV_TARGET
     {
-return input.localUV.x >= 1.0f - (2.0f / buttonSize.x)
-    ? float4(1, 1, 1, 1)
-    : normalColor;
+		float4 iconColor = iconTexture.Sample(samplerState, input.localUV);
+		float4 backgroundColor = input.localUV.x >= 1.0f - (2.0f / buttonSize.x)
+		? float4(1.0f, 1.0f, 1.0f, 1.0f)
+		: normalColor;
+		return backgroundColor * (1.0f - iconColor.a) + iconColor * iconColor.a;
     }
 )";
 
@@ -193,11 +220,13 @@ return input.localUV.x >= 1.0f - (2.0f / buttonSize.x)
 	HRESULT hr1 = device->CreateVertexShader(vertexBlob->GetBufferPointer(), vertexBlob->GetBufferSize(), nullptr, &m_vertexShader);
 	HRESULT hr2 = device->CreatePixelShader(pixelBlob->GetBufferPointer(), pixelBlob->GetBufferSize(), nullptr, &m_pixelShader);
 
-	if (FAILED(hr1)) {
+	if (FAILED(hr1)) 
+	{
 		OutputDebugStringA("FAILED TO CREATE VERTEX SHADER\n");
 		return false;
 	}
-	if (FAILED(hr2)) {
+	if (FAILED(hr2)) 
+	{
 		OutputDebugStringA("FAILED TO CREATE PIXEL SHADER\n");
 		return false;
 	}
@@ -229,6 +258,8 @@ void GUIButton::Shutdown()
 	if (m_samplerState) m_samplerState->Release();
 	if (m_matrixBuffer) m_matrixBuffer->Release();
 	if (m_buttonBuffer) m_buttonBuffer->Release();
+	if (m_iconTexture) m_iconTexture->Release();
+	if (m_samplerState) m_samplerState->Release();
 }
 
 void GUIButton::Render(ID3D11DeviceContext* deviceContext)
@@ -246,9 +277,12 @@ void GUIButton::Render(ID3D11DeviceContext* deviceContext)
 
 	// Ustaw constant buffer
 	deviceContext->VSSetConstantBuffers(0, 1, &m_matrixBuffer);
-	deviceContext->PSSetConstantBuffers(0, 1, &m_matrixBuffer);
 	deviceContext->VSSetConstantBuffers(1, 1, &m_buttonBuffer);
+
 	deviceContext->PSSetConstantBuffers(1, 1, &m_buttonBuffer);
+
+	deviceContext->PSSetShaderResources(0, 1, &m_iconTexture);
+	deviceContext->PSSetSamplers(0, 1, &m_samplerState);
 
 	// Renderuj
 	deviceContext->Draw(4, 0);

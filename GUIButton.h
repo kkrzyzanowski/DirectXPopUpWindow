@@ -11,7 +11,7 @@ public:
 
     using ClickHandler = std::function<void()> ;
 
-    GUIButton(const std::wstring& text, float x, float y, float width, float height);
+    GUIButton(const std::wstring& text, const std::wstring& iconPath, float x, float y, float width, float height);
     ~GUIButton();
 
     bool Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceContext);
@@ -50,6 +50,7 @@ private:
     };
 
     std::wstring m_text;
+    std::wstring m_iconPath;
     DirectX::XMFLOAT2 m_position;
     DirectX::XMFLOAT2 m_size;
     bool m_clicked;
@@ -63,10 +64,13 @@ private:
     ID3D11SamplerState* m_samplerState;
     ID3D11Buffer* m_matrixBuffer;
 	ID3D11Buffer* m_buttonBuffer;
+    ID3D11ShaderResourceView* m_iconTexture;
 
     DirectX::XMFLOAT4 m_normalColor;
     DirectX::XMFLOAT4 m_hoverColor;
     DirectX::XMFLOAT4 m_clickColor;
+
+  
 
 	MatrixBufferType m_matrixBufferData;
 

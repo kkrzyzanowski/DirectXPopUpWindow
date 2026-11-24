@@ -36,6 +36,7 @@ private:
     D3D11_VIEWPORT m_viewport;
 	GUIButton** m_button = nullptr;
 	ID3D11RasterizerState* m_rasterizerState;
+	ID3D11BlendState* m_blendState = nullptr;
 	ID3D11DepthStencilState* m_depthStencilState;
 
 	View* m_view = nullptr;

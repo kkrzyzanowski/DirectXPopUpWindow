@@ -3,8 +3,35 @@
 void View::InitializeView(ID3D11Device* device, ID3D11DeviceContext* deviceContext)
 {
 	m_buttons = new GUIButton * [m_numberOfButtons];
+
+	m_buttons[0] = new GUIButton(
+		L"Ten komputer",
+		L"Assets\\mycomputer-icon.png",
+		0.0f,
+		0.0f,
+		100.0f,
+		100.0f);
+
+	m_buttons[1] = new GUIButton(
+		L"Dysk C",
+		L"Assets\\harddrive-icon.png",
+		100.0f,
+		0.0f,
+		100.0f,
+		100.0f);
+
+	for (int i = 2; i < m_numberOfButtons; ++i)
+	{
+		m_buttons[i] = new GUIButton(
+			L"Test",
+			L"Assets\\favorites-icon.png",
+			i * 100.0f,
+			0.0f,
+			100.0f,
+			100.0f);
+	}
+
 	for (int i = 0; i < m_numberOfButtons; ++i) {
-		m_buttons[i] = new GUIButton(L"Test", i * 100.0f, 0.0f, 100.0f, 100.0f);
 		m_buttons[i]->Initialize(device, deviceContext);
 	}
 

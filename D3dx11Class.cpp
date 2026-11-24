@@ -21,6 +21,7 @@ bool D3dx11Class::InitializeDirectX(int screenWidth, int screenHeight, HWND hwnd
 	ID3D11Texture2D* backBufferPtr;
 	D3D11_TEXTURE2D_DESC depthBufferDesc;
 	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
+	D3D11_BLEND_DESC blendDesc;
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 	D3D11_RASTERIZER_DESC rasterDesc;
 	unsigned int numerator, denominator;
@@ -120,6 +121,24 @@ bool D3dx11Class::InitializeDirectX(int screenWidth, int screenHeight, HWND hwnd
 	m_device->CreateRasterizerState(&rasterDesc, &m_rasterizerState);
 	m_deviceContext->RSSetState(m_rasterizerState);
 
+	blendDesc = {};
+	blendDesc.RenderTarget[0].BlendEnable = true;
+	blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+	if (FAILED(m_device->CreateBlendState(&blendDesc, &m_blendState)))
+	{
+		return false;
+	}
+
+	float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	m_deviceContext->OMSetBlendState(m_blendState, blendFactor, 0xFFFFFFFF);
+
 	// Wy³¹cz depth testing
 	depthStencilDesc = {};
 	depthStencilDesc.DepthEnable = false;
@@ -166,15 +185,21 @@ void D3dx11Class::Shutdown()
 		m_swapChain = 0;
 	}
 
-	if (m_rasterizerState) {
+	if (m_rasterizerState) 
+	{
 		m_rasterizerState->Release();
 		m_rasterizerState = nullptr;
 	}
-	if (m_depthStencilState) {
+	if (m_depthStencilState) 
+	{
 		m_depthStencilState->Release();
 		m_depthStencilState = nullptr;
 	}
-
+	if (m_blendState)
+	{
+		m_blendState->Release();
+		m_blendState = nullptr;
+	}
 	return;
 }
 
